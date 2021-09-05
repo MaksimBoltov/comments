@@ -6,9 +6,10 @@ from django.test import TestCase
 from comments.models import Comment, EntityType, User
 
 
-class PaginationTest(TestCase):
-    """Test work custom pagination class 'PaginationComments'."""
-    parent_entity = uuid.uuid4()
+class CommentsHistoryPaginationTest(TestCase):
+    """Test work custom pagination class 'PaginationHistoryUserComments'."""
+    nickname = 'nick'
+    uuid_user = uuid.uuid4()
     comments_text = ['Comment1', 'Comment2', 'Comment3']
 
     @classmethod
@@ -16,23 +17,29 @@ class PaginationTest(TestCase):
         """Set up the data for test.
         Create 3 child comment for test.
         """
+        # create type of entity
         entity_type = EntityType.objects.create(
             name="Comment", description=""
         )
-        user = User.objects.create(nickname="nick", firstname="Nick")
-
+        # create user
+        user = User.objects.create(
+            uuid_user=cls.uuid_user,
+            nickname=cls.nickname,
+            firstname="Nick"
+        )
+        # create comments by user
         for text in cls.comments_text:
             Comment.objects.create(
                 user=user,
                 text=text,
-                parent_entity=cls.parent_entity,
+                parent_entity=uuid.uuid4(),
                 parent_entity_type=entity_type
             )
 
     def test_pagination_with_standard_page_size_comments_count(self):
-        """Get first level comments with standard page size - 10."""
+        """Get first level comments with standard page size - 50."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}"
+            f"/api/history-comments/{self.nickname}"
         )
         data = json.loads(response.content)
 
@@ -43,7 +50,7 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_first_page(self):
         """Test the first page of pagination with page_size = 2."""
         response_first_page = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page_size=2"
+            f"/api/history-comments/{self.nickname}?page_size=2"
         )
         data_first = json.loads(response_first_page.content)
 
@@ -54,7 +61,7 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_second_page(self):
         """Test the second page of pagination with page_size = 2."""
         response_second_page = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page=2&page_size=2"
+            f"/api/history-comments/{self.nickname}?page=2&page_size=2"
         )
         data_second = json.loads(response_second_page.content)
 
@@ -65,7 +72,7 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_third_page_exception(self):
         """Test that is not third page at pagination 3 comment by 2 on page."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page=3&page_size=2"
+            f"/api/history-comments/{self.nickname}?page=3&page_size=2"
         )
         data = json.loads(response.content)
 
@@ -73,31 +80,38 @@ class PaginationTest(TestCase):
         self.assertEqual(data['detail'], "Invalid page.")
 
 
-class GetFirstLevelCommentsTest(TestCase):
-    """Test work getting comments for certain entity."""
-    parent_entity = uuid.uuid4()
+class GetHistoryCommentsByUserTest(TestCase):
+    """Test work getting comments for certain user."""
+    nickname = 'nick'
+    uuid_user = uuid.uuid4()
 
     @classmethod
     def setUpTestData(cls):
         """Set up the data for test.
         Create 1 child comment for test data.
         """
+        # create instance of EntityType
         entity_type = EntityType.objects.create(
             name="Comment", description=""
         )
-        user = User.objects.create(nickname="nick", firstname="Nick")
-
+        # create User's instance
+        user = User.objects.create(
+            uuid_user=cls.uuid_user,
+            nickname=cls.nickname,
+            firstname="Nick"
+        )
+        # create Comment's instance
         Comment.objects.create(
             user=user,
             text='Text',
-            parent_entity=cls.parent_entity,
+            parent_entity=uuid.uuid4(),
             parent_entity_type=entity_type
         )
 
-    def test_get_first_lvl_comments_data(self):
+    def test_get_comments_history_for_nickname(self):
         """Get first level comments correct data."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}"
+            f"/api/history-comments/{self.nickname}"
         )
         data = json.loads(response.content)
 
@@ -106,24 +120,36 @@ class GetFirstLevelCommentsTest(TestCase):
         self.assertEqual(len(data['comments']), 1)
         self.assertEqual(data['comments'][0]['text'], 'Text')
 
-    def test_is_not_object_in_db(self):
-        """Test there is not object with invalid uuid in db."""
-        response = self.client.get(f"/api/first-lvl-comments/{uuid.uuid4()}")
+    def test_get_comments_history_for_uuid(self):
+        """Get first level comments correct data."""
+        response = self.client.get(
+            f"/api/history-comments/{self.uuid_user}"
+        )
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(data["comments_count"], 0)
-        self.assertEqual(data["comments"], [])
+        self.assertEqual(data['comments_count'], 1)
+        self.assertEqual(len(data['comments']), 1)
+        self.assertEqual(data['comments'][0]['text'], 'Text')
 
 
-class BadRequestExceptionTest(TestCase):
-    """Tests work custom exception class 'BadRequestException'."""
+class BadRequestExceptionUserDataTest(TestCase):
+    """Tests work custom exception class 'BadRequestExceptionUserData'."""
 
-    def test_invalid_uuid_value(self):
-        """Processing an invalid value of uuid."""
-        response = self.client.get("/api/first-lvl-comments/uuid")
+    def test_there_is_not_user_in_db_for_uuid(self):
+        """Test the user was not found by uuid."""
+        response = self.client.get(f"/api/history-comments/{uuid.uuid4()}")
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(data["name"], "Bad Request")
-        self.assertEqual(data["message"], "Value was not UUID")
+        self.assertEqual(data["message"], "User was not found.")
+
+    def test_there_is_not_user_in_db_for_nickname(self):
+        """Test the user was not found by nickname."""
+        response = self.client.get("/api/history-comments/11111")
+        data = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(data["name"], "Bad Request")
+        self.assertEqual(data["message"], "User was not found.")
