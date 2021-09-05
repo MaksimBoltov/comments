@@ -6,7 +6,8 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
 from api.serializers import CommentListSerializer
-from api.services import BadRequestException, PaginationComments
+from api.services import (BadRequestException, BadRequestExceptionUserData,
+                          PaginationComments, PaginationHistoryUserComments)
 from comments.models import Comment, EntityType, User
 
 
@@ -114,7 +115,9 @@ def manage_new_comment(request):
 
 class CommentsListView(ListAPIView):
     """Has method 'GET' for getting all first level comments
-    for a specific entity. Processes such requests as:
+    for a specific entity.
+
+    Processes such requests as:
         /api/first-lvl-comments/<str:uuid>
         /api/first-lvl-comments/<str:uuid>?page_size=<int>
         /api/first-lvl-comments/<str:uuid>?page=<int>
@@ -139,3 +142,52 @@ class CommentsListView(ListAPIView):
             raise BadRequestException
         else:
             return Comment.objects.filter(parent_entity=UUID(uuid_value))
+
+
+class CommentsUserHistoryListView(ListAPIView):
+    """Has method 'GET' for getting all comments by user.
+    As a parameter 'user', you can specify either the nickname or uuid.
+
+    Processes such requests as:
+        /api/history-comments/<str:user>
+        /api/history-comments/<str:user>?page_size=<int>
+        /api/history-comments/<str:user>?page=<int>
+        /api/history-comments/<str:user>?page=<int>&page_size=<int>
+    Where:
+    <str:user> - string representation of the value uuid or
+    nickname of specific user.
+    page_size - count of comments on page (default 50).
+    page - number of pagination page.
+    """
+
+    pagination_class = PaginationHistoryUserComments
+    serializer_class = CommentListSerializer
+
+    def get_queryset(self):
+        """Returns queryset with all comments certain user.
+        The comments are arranged from newer to older.
+
+        :raise: BadRequestException | BadRequestExceptionUserData
+        :return: Queryset of Comment's instance
+        """
+
+        # get 'user' from url's queryset
+        user_identify = self.kwargs.get('user', None)
+        # if the data was skipped
+        if user_identify is None:
+            raise BadRequestException
+        # if the uuid value was entered
+        elif is_uuid(user_identify):
+            if User.objects.filter(uuid_user=user_identify).count() == 0:
+                # raise 400 exception if user not found in db
+                raise BadRequestExceptionUserData
+            user = User.objects.get(uuid_user=user_identify)
+        # if the nickname value was entered
+        else:
+            if User.objects.filter(nickname=user_identify).count() == 0:
+                # raise 400 exception if user not found in db
+                raise BadRequestExceptionUserData
+            user = User.objects.get(nickname=user_identify)
+
+        return Comment.objects.filter(user=user).order_by('created_date').\
+            reverse()
