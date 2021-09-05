@@ -1,10 +1,12 @@
 import json
-from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from rest_framework.decorators import api_view
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
+from api.serializers import CommentListSerializer
+from api.services import BadRequestException, PaginationComments
 from comments.models import Comment, EntityType, User
 
 
@@ -76,7 +78,7 @@ def manage_new_comment(request):
 
     if request.method == "POST":
 
-        # checking the validity of the data
+        # check the validity of the data
         data = json.loads(request.body)
         valid_data, exception_message = is_valid_comment_request(data)
         if not valid_data:
@@ -87,29 +89,20 @@ def manage_new_comment(request):
             }
             return Response(response, status=400)
 
-        # adding new comment to DB
+        # add new comment to DB
         if is_uuid(data["author"]):
-            comment = Comment(
-                created_date=datetime.now(tz=timezone(timedelta(hours=0))),
-                user=User.objects.get(uuid_user=data["author"]),
-                text=data["text"],
-                parent_entity=UUID(data["parent_entity_uuid"]),
-                parent_entity_type=EntityType.objects.get(
-                    name=data["parent_entity_type"]
-                ),
-            )
-            comment.save()
+            user = User.objects.get(uuid_user=data["author"])
         else:
-            comment = Comment(
-                created_date=datetime.now(tz=timezone(timedelta(hours=0))),
-                user=User.objects.get(nickname=data["author"]),
-                text=data["text"],
-                parent_entity=UUID(data["parent_entity_uuid"]),
-                parent_entity_type=EntityType.objects.get(
-                    name=data["parent_entity_type"]
-                ),
-            )
-            comment.save()
+            user = User.objects.get(nickname=data["author"])
+        comment = Comment(
+            user=user,
+            text=data["text"],
+            parent_entity=UUID(data["parent_entity_uuid"]),
+            parent_entity_type=EntityType.objects.get(
+                name=data["parent_entity_type"]
+            ),
+        )
+        comment.save()
 
         response = {
             "name": "Created",
@@ -117,3 +110,32 @@ def manage_new_comment(request):
             "status": 201
         }
         return Response(response, status=201)
+
+
+class CommentsListView(ListAPIView):
+    """Has method 'GET' for getting all first level comments
+    for a specific entity. Processes such requests as:
+        /api/first-lvl-comments/<str:uuid>
+        /api/first-lvl-comments/<str:uuid>?page_size=<int>
+        /api/first-lvl-comments/<str:uuid>?page=<int>
+        /api/first-lvl-comments/<str:uuid>?page=<int>&page_size=<int>
+    Where:
+    <str:uuid> - string representation of the value uuid of specific entity.
+    page_size - count of comments on page.
+    page - number of pagination page.
+    """
+
+    pagination_class = PaginationComments
+    serializer_class = CommentListSerializer
+
+    def get_queryset(self):
+        """Returns queryset with all first level comments of a certain entity.
+
+        :raise: BadRequestException
+        :return: Queryset of Comment's instance
+        """
+        uuid_value = self.kwargs.get('uuid', None)
+        if not is_uuid(str(uuid_value)):
+            raise BadRequestException
+        else:
+            return Comment.objects.filter(parent_entity=UUID(uuid_value))

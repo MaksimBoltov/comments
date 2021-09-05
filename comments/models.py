@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from django.db import models
 
@@ -53,6 +54,12 @@ class Comment(models.Model):
     class Meta:
         verbose_name = "comment"
         verbose_name_plural = "comments"
+
+    def save(self, *args, **kwargs):
+        """"Set datetime.now for created_date by default."""
+        if not self.created_date:
+            self.created_date = datetime.now(tz=timezone(timedelta(hours=0)))
+        return super(Comment, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.text
