@@ -14,10 +14,10 @@ jobs:
       - name: Install modules
         run: |
           pip install -r requirements.txt
-          pip install flake8 isort pytest
+          pip install flake8 isort
       - name: Check code style
         run: |
           flake8 .
           isort --check .
       - name: Run tests
-        run: py.test --doctest-modules tests
+        run: python manage.py test /tests/tests_django
