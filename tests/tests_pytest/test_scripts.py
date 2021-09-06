@@ -1,6 +1,6 @@
 import uuid
 
-from api.views import is_uuid
+from api.services import is_uuid
 
 
 def test_value_is_uuid():

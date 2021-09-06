@@ -1,73 +1,21 @@
+import csv
 import json
 from uuid import UUID
 
+from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from api.serializers import CommentListSerializer
-from api.services import (BadRequestException, BadRequestExceptionUserData,
-                          PaginationComments, PaginationHistoryUserComments)
+from api.services import (BadRequestException, BadRequestExceptionDatetime,
+                          BadRequestExceptionUserData, PaginationComments,
+                          PaginationHistoryUserComments,
+                          get_comments_queryset_entity_with_filtered,
+                          get_comments_queryset_user_with_filtered, get_date,
+                          get_user, is_uuid, is_valid_comment_request)
 from comments.models import Comment, EntityType, User
-
-
-def is_uuid(check_uuid: str) -> bool:
-    """Returns whether the check_uuid is a uuid.
-
-    :param check_uuid: string for checking value
-    :type check_uuid: str
-
-    :rtype: bool
-    :return: whether the check_uuid is a uuid value
-    """
-
-    try:
-        UUID(check_uuid)
-        return True
-    except ValueError:
-        return False
-
-
-def is_valid_comment_request(data: dict) -> (bool, str):
-    """Returns True if request's data is valid and False otherwise.
-    Also returns exceptions message if data is not valid.
-
-    :param data: new comment's data that adding to database
-    :type data: dict
-
-    :rtype: (bool, str)
-    :return: is request's data valid and exception message if it is required
-    """
-
-    # checking the availability of keys
-    required_keys = [
-        "author", "text", "parent_entity_uuid", "parent_entity_type"
-    ]
-    for key in required_keys:
-        try:
-            data[key]
-        except KeyError as exc:
-            return False, f"The {exc} field was not found!"
-
-    # checking that the user exists
-    if is_uuid(data["author"]):
-        if not User.objects.filter(uuid_user=data["author"]).count():
-            return False, f"The user '{data['author']}' was not found"
-    elif not User.objects.filter(nickname=data["author"]).count():
-        return False, f"The user '{data['author']}' was not found"
-
-    # checking that parent_entity_uuid is uuid
-    if not is_uuid(data["parent_entity_uuid"]):
-        return False, "The parent_entity_uuid must ba uuid"
-
-    # checking that the parent entity type exists
-    if str(data["parent_entity_type"]).isdigit():
-        if not len(EntityType.objects.filter(id=data["parent_entity_type"])):
-            return False, "The parent_entity_type was not found"
-    elif not len(EntityType.objects.filter(name=data["parent_entity_type"])):
-        return False, "The parent_entity_type was not found"
-
-    return True, ""
 
 
 @api_view(["POST"])
@@ -176,18 +124,167 @@ class CommentsUserHistoryListView(ListAPIView):
         # if the data was skipped
         if user_identify is None:
             raise BadRequestException
-        # if the uuid value was entered
-        elif is_uuid(user_identify):
-            if User.objects.filter(uuid_user=user_identify).count() == 0:
-                # raise 400 exception if user not found in db
-                raise BadRequestExceptionUserData
-            user = User.objects.get(uuid_user=user_identify)
-        # if the nickname value was entered
-        else:
-            if User.objects.filter(nickname=user_identify).count() == 0:
-                # raise 400 exception if user not found in db
-                raise BadRequestExceptionUserData
-            user = User.objects.get(nickname=user_identify)
+        # get user instance is does it exist or None
+        user = get_user(user_identify)
+        # user doesn't exist
+        if user is None:
+            raise BadRequestExceptionUserData
 
         return Comment.objects.filter(user=user).order_by('created_date').\
             reverse()
+
+
+class CSVUserViewSet(APIView):
+    """Has method 'GET' for getting csv file with all comments for certain user.
+    As a parameter 'user', you can specify either the nickname or uuid.
+
+    Processes such requests as:
+        /api/history/user/<str:user>
+        /api/history/user/<str:user>?start_date=<str>
+        /api/history/user/<str:user>?end_date=<str>
+        /api/history/user/<str:user>?start_date=<int>&end_date=<str>
+
+    Where:
+    <str:user> - string representation of the value uuid or
+    nickname of specific user.
+    start_date - starting from what date to output the result
+    (format: YYY-MM-DDThh:mm:ss).
+    end_date - ending with what date to output the result
+    (format: YYY-MM-DDThh:mm:ss).
+
+    If input invalid date raise exception.
+    """
+    def get(self, request, user: str):
+        """The function processes 'GET' requests.
+
+        :param request: request from user.
+
+        :param user: for which user to display the history
+        :type user: str
+
+        :raises BadRequestException: if user value is None
+        :raises BadRequestExceptionUserData: if user doesn't exists
+        :raises BadRequestExceptionDatetime: if start_date or end_date
+         from get parameters is invalid
+
+        :return: response with csv file.
+        """
+        # check the user data
+        if user is None:
+            raise BadRequestException
+        # check is user does it exist
+        user_instance = get_user(user)
+        if user_instance is None:
+            raise BadRequestExceptionUserData
+
+        # get and check date
+        start_date = request.GET.get('start_date', None)
+        end_date = request.GET.get('end_date', None)
+        # check the start time data
+        if start_date is not None:
+            if get_date(start_date) is None:
+                raise BadRequestExceptionDatetime
+
+        # check the end time data
+        if end_date is not None:
+            if get_date(end_date) is None:
+                raise BadRequestExceptionDatetime
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="export.csv"'
+        field_headings = [
+            'uuid_comment', 'created_date', 'user',
+            'text', 'parent_entity', 'parent_entity_type'
+        ]
+        writer = csv.DictWriter(response, fieldnames=field_headings)
+        writer.writeheader()
+
+        # add comments from queryset to csv file
+        queryset = get_comments_queryset_user_with_filtered(
+            user_instance, start_date, end_date
+        )
+        for comment in queryset:
+            writer.writerow({
+                'uuid_comment': comment.uuid_comment,
+                'created_date': str(comment.created_date),
+                'user': user_instance.nickname,
+                'text': comment.text,
+                'parent_entity': comment.parent_entity,
+                'parent_entity_type': comment.parent_entity_type.name
+            })
+
+        return response
+
+
+class CSVEntityViewSet(APIView):
+    """Has method 'GET' for getting csv file with all comments for certain entity.
+
+    Processes such requests as:
+        /api/history/entity/<str:uuid>
+        /api/history/entity/<str:uuid>?start_date=<str>
+        /api/history/entity/<str:uuid>?end_date=<str>
+        /api/history/entity/<str:uuid>?start_date=<int>&end_date=<str>
+
+    Where:
+    <str:uuid> - uuid of entity
+    start_date - starting from what date to output the result
+    (format: 'YYY-MM-DDThh:mm:ss').
+    end_date - ending with what date to output the result
+    (format: 'YYY-MM-DDThh:mm:ss').
+
+    If input invalid date raise exception.
+    """
+    def get(self, request, uuid: str):
+        """The function processes 'GET' requests.
+
+        :param request: request from user.
+
+        :param uuid: uuid of entity for which need display the history
+        :type uuid: str
+
+        :raises BadRequestException: if uuid is not UUID value
+        :raises BadRequestExceptionDatetime: if start_date or end_date
+         from get parameters is invalid
+
+        :return: response with csv file.
+        """
+        if not is_uuid(uuid):
+            return BadRequestException
+
+        # get and check date
+        start_date = request.GET.get('start_date', None)
+        end_date = request.GET.get('end_date', None)
+        # check the start time data
+        if start_date is not None:
+            if get_date(start_date) is None:
+                raise BadRequestExceptionDatetime
+
+        # check the end time data
+        if end_date is not None:
+            if get_date(end_date) is None:
+                raise BadRequestExceptionDatetime
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="export.csv"'
+        field_headings = [
+            'uuid_comment', 'created_date', 'user',
+            'text', 'parent_entity', 'parent_entity_type'
+        ]
+        writer = csv.DictWriter(response, fieldnames=field_headings)
+        writer.writeheader()
+
+        # add comments from queryset to csv file
+        queryset = get_comments_queryset_entity_with_filtered(
+            uuid, start_date, end_date
+        )
+        for comment in queryset:
+            writer.writerow({
+                'uuid_comment': comment.uuid_comment,
+                'created_date': str(comment.created_date),
+                'user': comment.user.nickname,
+                'text': comment.text,
+                'parent_entity': str(uuid),
+                'parent_entity_type': comment.parent_entity_type.name
+            })
+
+        return response
