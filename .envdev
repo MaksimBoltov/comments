@@ -1,0 +1,10 @@
+DEBUG=1
+SECRET_KEY='django-insecure-b2%$e)ky4!!$!mdmce_0d5pf-m2jr=^bfu#!7^*&@8(!7+&)4o'
+DJANGO_ALLOWED_HOSTS=127.0.0.1
+SQL_ENGINE=django.db.backends.postgresql_psycopg2
+SQL_DATABASE=comment
+SQL_USER=postgres
+SQL_PASSWORD=postgres
+SQL_HOST=postgres-django
+SQL_PORT=5432
+DATABASE=postgres

@@ -1,0 +1,37 @@
+version: '3.4'
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+  pgdata_django:
+
+services:
+  postgres-django:
+    image: postgres
+    volumes:
+      - pgdata_django:/var/lib/postgresql/data
+    ports:
+      - "9111:5432"
+    networks:
+      - postgres
+    environment:
+      - POSTGRES_DB=comment
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  django-app:
+    build: .
+    command: python3 manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/estimate_project
+    #network_mode: host
+    ports:
+      - "9112:8000"
+    depends_on:
+      - postgres-django
+    env_file:
+      - ./.envdev
+    networks:
+      - postgres
