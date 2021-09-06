@@ -263,7 +263,7 @@ class CreateNewCommentTest(TestCase):
 
         self.assertEqual(data["name"], "Bad Request")
         self.assertEqual(
-            data["message"], "The parent_entity_uuid must ba uuid"
+            data["message"], "The parent_entity_uuid must be uuid"
         )
         self.assertEqual(data["status"], 400)
 

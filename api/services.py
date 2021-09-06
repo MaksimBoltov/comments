@@ -59,7 +59,7 @@ def is_valid_comment_request(data: dict) -> (bool, str):
 
     # checking that parent_entity_uuid is uuid
     if not is_uuid(data["parent_entity_uuid"]):
-        return False, "The parent_entity_uuid must ba uuid"
+        return False, "The parent_entity_uuid must be uuid"
 
     # checking that the parent entity type exists
     if str(data["parent_entity_type"]).isdigit():
