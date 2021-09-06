@@ -39,7 +39,7 @@ class CommentsHistoryPaginationTest(TestCase):
     def test_pagination_with_standard_page_size_comments_count(self):
         """Get first level comments with standard page size - 50."""
         response = self.client.get(
-            f"/api/history-comments/{self.nickname}"
+            f"/api/history-comments?user={self.nickname}"
         )
         data = json.loads(response.content)
 
@@ -50,7 +50,7 @@ class CommentsHistoryPaginationTest(TestCase):
     def test_pagination_two_comments_in_page_first_page(self):
         """Test the first page of pagination with page_size = 2."""
         response_first_page = self.client.get(
-            f"/api/history-comments/{self.nickname}?page_size=2"
+            f"/api/history-comments?user={self.nickname}&page_size=2"
         )
         data_first = json.loads(response_first_page.content)
 
@@ -61,7 +61,7 @@ class CommentsHistoryPaginationTest(TestCase):
     def test_pagination_two_comments_in_page_second_page(self):
         """Test the second page of pagination with page_size = 2."""
         response_second_page = self.client.get(
-            f"/api/history-comments/{self.nickname}?page=2&page_size=2"
+            f"/api/history-comments?user={self.nickname}&page=2&page_size=2"
         )
         data_second = json.loads(response_second_page.content)
 
@@ -72,7 +72,7 @@ class CommentsHistoryPaginationTest(TestCase):
     def test_pagination_two_comments_in_page_third_page_exception(self):
         """Test that is not third page at pagination 3 comment by 2 on page."""
         response = self.client.get(
-            f"/api/history-comments/{self.nickname}?page=3&page_size=2"
+            f"/api/history-comments?user={self.nickname}&page=3&page_size=2"
         )
         data = json.loads(response.content)
 
@@ -111,7 +111,7 @@ class GetHistoryCommentsByUserTest(TestCase):
     def test_get_comments_history_for_nickname(self):
         """Get first level comments correct data."""
         response = self.client.get(
-            f"/api/history-comments/{self.nickname}"
+            f"/api/history-comments?user={self.nickname}"
         )
         data = json.loads(response.content)
 
@@ -123,7 +123,7 @@ class GetHistoryCommentsByUserTest(TestCase):
     def test_get_comments_history_for_uuid(self):
         """Get first level comments correct data."""
         response = self.client.get(
-            f"/api/history-comments/{self.uuid_user}"
+            f"/api/history-comments?user={self.uuid_user}"
         )
         data = json.loads(response.content)
 
@@ -136,9 +136,25 @@ class GetHistoryCommentsByUserTest(TestCase):
 class BadRequestExceptionUserDataTest(TestCase):
     """Tests work custom exception class 'BadRequestExceptionUserData'."""
 
+    def test_there_is_not_user_value_in_input(self):
+        """Test the 'user' was not found in input."""
+        response = self.client.get("/api/history-comments")
+        data = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(data["name"], "Bad Request")
+        self.assertEqual(data["message"], "Please, input 'user' value.")
+        self.assertEqual(
+            data["hint"],
+            "You need to write ?user=<str:uuid> parameter. "
+            "Pagination parameters: ?page=<str>, ?page_size=<str>."
+        )
+
     def test_there_is_not_user_in_db_for_uuid(self):
         """Test the user was not found by uuid."""
-        response = self.client.get(f"/api/history-comments/{uuid.uuid4()}")
+        response = self.client.get(
+            f"/api/history-comments?user={uuid.uuid4()}"
+        )
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
@@ -147,7 +163,7 @@ class BadRequestExceptionUserDataTest(TestCase):
 
     def test_there_is_not_user_in_db_for_nickname(self):
         """Test the user was not found by nickname."""
-        response = self.client.get("/api/history-comments/11111")
+        response = self.client.get("/api/history-comments?user=1111")
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)

@@ -196,6 +196,41 @@ def get_comments_queryset_entity_with_filtered(
         )
 
 
+def get_all_child_comments(entity: str) -> list:
+    """Return list of all comments, that was written for
+    certain entity.
+    The result list consists of the following dictionaries:
+        {
+          "uuid_comment": <uuid>,
+          "created_date": <str>,
+          "user": <str>,
+          "parent_entity": <uuid>,
+          "parent_entity_type": <str>,
+          "text": <str>,
+          "child": get_all_child_comments(<str>)
+        }
+
+        :param entity: the entity to find all child comments for
+        :type entity: str
+
+        :return: list of all comments for this entity
+        :rtype: list
+    """
+    child_comments_list = []
+    child_comments = Comment.objects.filter(parent_entity=UUID(entity))
+    for child_comment in child_comments:
+        child_comments_list.append({
+            "uuid_comment": child_comment.uuid_comment,
+            "created_date": child_comment.created_date,
+            "user": child_comment.user.nickname,
+            "parent_entity": str(child_comment.parent_entity),
+            "parent_entity_type": child_comment.parent_entity_type.name,
+            "text": child_comment.text,
+            "child": get_all_child_comments(str(child_comment.uuid_comment))
+        })
+    return child_comments_list
+
+
 # Another services #
 
 class PaginationComments(PageNumberPagination):
@@ -299,6 +334,30 @@ class BadRequestExceptionDatetime(APIException):
     default_detail = {
         "name": "Bad Request",
         "message": "Date you entered is incorrect.",
+        "status": 400,
+    }
+    default_code = 'service_unavailable'
+
+
+class BadRequestExceptionEntityNotFound(APIException):
+    status_code = 400
+    default_detail = {
+        "name": "Bad Request",
+        "message": "Please, input 'entity' value.",
+        "hint": "You need to write ?entity=<str:uuid> parameter. "
+                "Pagination parameters: ?page=<str>, ?page_size=<str>.",
+        "status": 400,
+    }
+    default_code = 'service_unavailable'
+
+
+class BadRequestExceptionUserNotFound(APIException):
+    status_code = 400
+    default_detail = {
+        "name": "Bad Request",
+        "message": "Please, input 'user' value.",
+        "hint": "You need to write ?user=<str:uuid> parameter. "
+                "Pagination parameters: ?page=<str>, ?page_size=<str>.",
         "status": 400,
     }
     default_code = 'service_unavailable'

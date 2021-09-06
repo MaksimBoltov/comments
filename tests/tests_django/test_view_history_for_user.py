@@ -83,7 +83,7 @@ class CommentsHistoryForUserTest(TestCase):
     def test_get_all_comments_for_certain_user_by_nickname(self):
         """Get all comments for certain user with nickname parameter."""
         response = self.client.get(
-            f"/api/history/user/{self.nickname}"
+            f"/api/history/user?user={self.nickname}"
         )
         data = response.content
         # generate all comments from csv file
@@ -95,7 +95,7 @@ class CommentsHistoryForUserTest(TestCase):
     def test_get_all_comments_for_certain_user_by_uuid(self):
         """Get all comments for certain user with uuid parameter."""
         response = self.client.get(
-            f"/api/history/user/{self.uuid_user}"
+            f"/api/history/user?user={self.uuid_user}"
         )
         data = response.content
         # generate all comments from csv file
@@ -110,7 +110,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input datetime: 2000-01-01T08:00:00
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?start_date=2000-01-01T08:00:00"
+            f"/api/history/user?user={self.nickname}&"
+            f"start_date=2000-01-01T08:00:00"
         )
         data = response.content
         # generate all comments from csv file
@@ -125,7 +126,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input datetime: 2000-01-01T08:00:01
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?start_date=2000-01-01T08:00:01"
+            f"/api/history/user?user={self.nickname}&"
+            f"start_date=2000-01-01T08:00:01"
         )
         data = response.content
         # generate all comments from csv file
@@ -140,7 +142,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input datetime: 2000-01-01T08:00:02
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?start_date=2000-01-01T08:00:02"
+            f"/api/history/user?user={self.nickname}&"
+            f"start_date=2000-01-01T08:00:02"
         )
         data = response.content
         # generate all comments from csv file
@@ -156,7 +159,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input end datetime: 2000-01-01T08:00:11
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?end_date=2000-01-01T08:00:11"
+            f"/api/history/user?user={self.nickname}&"
+            f"end_date=2000-01-01T08:00:11"
         )
         data = response.content
         # generate all comments from csv file
@@ -171,7 +175,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input end datetime: 2000-01-01T08:00:10
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?end_date=2000-01-01T08:00:10"
+            f"/api/history/user?user={self.nickname}&"
+            f"end_date=2000-01-01T08:00:10"
         )
         data = response.content
         # generate all comments from csv file
@@ -186,7 +191,8 @@ class CommentsHistoryForUserTest(TestCase):
         Input end datetime: 2000-01-01T08:00:09
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?end_date=2000-01-01T08:00:09"
+            f"/api/history/user?user={self.nickname}&"
+            f"end_date=2000-01-01T08:00:09"
         )
         data = response.content
         # generate all comments from csv file
@@ -201,7 +207,7 @@ class CommentsHistoryForUserTest(TestCase):
         There are all two comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?"
+            f"/api/history/user?user={self.nickname}&"
             f"start_date=2000-01-01T08:00:00&end_date=2000-01-01T08:00:11"
         )
         data = response.content
@@ -216,7 +222,7 @@ class CommentsHistoryForUserTest(TestCase):
         There are none comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?"
+            f"/api/history/user?user={self.nickname}&"
             f"start_date=2000-01-01T08:00:05&end_date=2000-01-01T08:00:06"
         )
         data = response.content
@@ -231,7 +237,7 @@ class CommentsHistoryForUserTest(TestCase):
         There is only one comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/user/{self.nickname}?"
+            f"/api/history/user?user={self.nickname}&"
             f"start_date=2000-01-01T08:00:00&end_date=2000-01-01T08:00:05"
         )
         data = response.content
@@ -258,7 +264,7 @@ class ExceptionHistoryByUserTest(TestCase):
         # create user
         user = User.objects.create(
             uuid_user=uuid.uuid4(),
-            nickname='nick',
+            nickname='user',
             firstname="Nick"
         )
         # create comment by user
@@ -274,7 +280,9 @@ class ExceptionHistoryByUserTest(TestCase):
         """Test raise exception 'BadRequestExceptionUserData' when
         user not found by input nickname.
         """
-        response = self.client.get("/api/history/user/unreal_user_nickname")
+        response = self.client.get(
+            "/api/history/user?user=unreal_user_nickname"
+        )
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
@@ -285,7 +293,7 @@ class ExceptionHistoryByUserTest(TestCase):
         """Test raise exception 'BadRequestExceptionUserData' when
         user not found by input uuid.
         """
-        response = self.client.get(f"/api/history/user/{uuid.uuid4()}")
+        response = self.client.get(f"/api/history/user?user={uuid.uuid4()}")
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
@@ -297,7 +305,7 @@ class ExceptionHistoryByUserTest(TestCase):
         was written incorrect datetime in start_date.
         """
         response = self.client.get(
-            "/api/history/user/nick?start_date=2021.01.01"
+            "/api/history/user?user=user&start_date=2021.01.01"
         )
         data = json.loads(response.content)
 
@@ -310,8 +318,9 @@ class ExceptionHistoryByUserTest(TestCase):
         was written incorrect datetime in end_date.
         """
         response = self.client.get(
-            "/api/history/user/nick?end_date=2021.01.01"
+            "/api/history/user?user=user&end_date=2021.01.01"
         )
+
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)

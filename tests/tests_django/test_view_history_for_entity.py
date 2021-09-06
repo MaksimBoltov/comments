@@ -82,7 +82,7 @@ class CommentsHistoryForEntityTest(TestCase):
     def test_get_all_comments_for_certain_entity(self):
         """Get all comments for certain user with uuid parameter."""
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}"
+            f"/api/history/entity?entity={self.uuid_entity}"
         )
         data = response.content
         # generate all comments from csv file
@@ -97,8 +97,8 @@ class CommentsHistoryForEntityTest(TestCase):
         Input datetime: 2000-01-01T08:00:00
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}"
-            f"?start_date=2000-01-01T08:00:00"
+            f"/api/history/entity?entity={self.uuid_entity}"
+            f"&start_date=2000-01-01T08:00:00"
         )
         data = response.content
         # generate all comments from csv file
@@ -113,7 +113,7 @@ class CommentsHistoryForEntityTest(TestCase):
         Input datetime: 2000-01-01T08:00:01
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"start_date=2000-01-01T08:00:01"
         )
         data = response.content
@@ -129,7 +129,7 @@ class CommentsHistoryForEntityTest(TestCase):
         Input datetime: 2000-01-01T08:00:02
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"start_date=2000-01-01T08:00:02"
         )
         data = response.content
@@ -146,7 +146,7 @@ class CommentsHistoryForEntityTest(TestCase):
         Input end datetime: 2000-01-01T08:00:11
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"end_date=2000-01-01T08:00:11"
         )
         data = response.content
@@ -162,7 +162,7 @@ class CommentsHistoryForEntityTest(TestCase):
         Input end datetime: 2000-01-01T08:00:10
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"end_date=2000-01-01T08:00:10"
         )
         data = response.content
@@ -178,7 +178,7 @@ class CommentsHistoryForEntityTest(TestCase):
         Input end datetime: 2000-01-01T08:00:09
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"end_date=2000-01-01T08:00:09"
         )
         data = response.content
@@ -194,7 +194,7 @@ class CommentsHistoryForEntityTest(TestCase):
         There are all two comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"start_date=2000-01-01T08:00:00&end_date=2000-01-01T08:00:11"
         )
         data = response.content
@@ -209,7 +209,7 @@ class CommentsHistoryForEntityTest(TestCase):
         There are none comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"start_date=2000-01-01T08:00:05&end_date=2000-01-01T08:00:06"
         )
         data = response.content
@@ -224,7 +224,7 @@ class CommentsHistoryForEntityTest(TestCase):
         There is only one comments inside interval.
         """
         response = self.client.get(
-            f"/api/history/entity/{self.uuid_entity}?"
+            f"/api/history/entity?entity={self.uuid_entity}&"
             f"start_date=2000-01-01T08:00:00&end_date=2000-01-01T08:00:05"
         )
         data = response.content
@@ -238,6 +238,8 @@ class CommentsHistoryForEntityTest(TestCase):
 
 class ExceptionHistoryByEntityTest(TestCase):
     """Test filtered and return comments for certain user."""
+
+    uuid_entity = uuid.uuid4()
 
     @classmethod
     def setUpTestData(cls):
@@ -259,7 +261,7 @@ class ExceptionHistoryByEntityTest(TestCase):
             user=user,
             text='Text',
             created_date='2000-01-01T08:00:10',
-            parent_entity=uuid.uuid4(),
+            parent_entity=cls.uuid_entity,
             parent_entity_type=entity_type
         )
 
@@ -268,7 +270,8 @@ class ExceptionHistoryByEntityTest(TestCase):
         was written incorrect datetime in start_date.
         """
         response = self.client.get(
-            "/api/history/user/nick?start_date=2021.01.01"
+            f"/api/history/entity?entity={self.uuid_entity}&"
+            f"start_date=2021.01.01"
         )
         data = json.loads(response.content)
 
@@ -281,7 +284,8 @@ class ExceptionHistoryByEntityTest(TestCase):
         was written incorrect datetime in end_date.
         """
         response = self.client.get(
-            "/api/history/user/nick?end_date=2021.01.01"
+            f"/api/history/entity?entity={self.uuid_entity}&"
+            f"end_date=2021.01.01"
         )
         data = json.loads(response.content)
 

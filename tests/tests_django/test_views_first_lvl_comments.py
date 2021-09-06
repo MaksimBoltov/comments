@@ -32,7 +32,7 @@ class PaginationTest(TestCase):
     def test_pagination_with_standard_page_size_comments_count(self):
         """Get first level comments with standard page size - 10."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}"
+            f"/api/first-lvl-comments?entity={self.parent_entity}"
         )
         data = json.loads(response.content)
 
@@ -43,7 +43,7 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_first_page(self):
         """Test the first page of pagination with page_size = 2."""
         response_first_page = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page_size=2"
+            f"/api/first-lvl-comments?entity={self.parent_entity}&page_size=2"
         )
         data_first = json.loads(response_first_page.content)
 
@@ -54,7 +54,8 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_second_page(self):
         """Test the second page of pagination with page_size = 2."""
         response_second_page = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page=2&page_size=2"
+            f"/api/first-lvl-comments?entity={self.parent_entity}&"
+            f"page=2&page_size=2"
         )
         data_second = json.loads(response_second_page.content)
 
@@ -65,7 +66,8 @@ class PaginationTest(TestCase):
     def test_pagination_two_comments_in_page_third_page_exception(self):
         """Test that is not third page at pagination 3 comment by 2 on page."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}?page=3&page_size=2"
+            f"/api/first-lvl-comments?entity={self.parent_entity}&"
+            f"page=3&page_size=2"
         )
         data = json.loads(response.content)
 
@@ -97,7 +99,7 @@ class GetFirstLevelCommentsTest(TestCase):
     def test_get_first_lvl_comments_data(self):
         """Get first level comments correct data."""
         response = self.client.get(
-            f"/api/first-lvl-comments/{self.parent_entity}"
+            f"/api/first-lvl-comments?entity={self.parent_entity}"
         )
         data = json.loads(response.content)
 
@@ -108,7 +110,9 @@ class GetFirstLevelCommentsTest(TestCase):
 
     def test_is_not_object_in_db(self):
         """Test there is not object with invalid uuid in db."""
-        response = self.client.get(f"/api/first-lvl-comments/{uuid.uuid4()}")
+        response = self.client.get(
+            f"/api/first-lvl-comments?entity={uuid.uuid4()}"
+        )
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 200)
@@ -121,9 +125,23 @@ class BadRequestExceptionTest(TestCase):
 
     def test_invalid_uuid_value(self):
         """Processing an invalid value of uuid."""
-        response = self.client.get("/api/first-lvl-comments/uuid")
+        response = self.client.get("/api/first-lvl-comments?entity=uuid")
         data = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(data["name"], "Bad Request")
         self.assertEqual(data["message"], "Value was not UUID")
+
+    def test_there_are_not_entity_value(self):
+        """Processing an checking for absence entity value in url."""
+        response = self.client.get("/api/first-lvl-comments")
+        data = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(data["name"], "Bad Request")
+        self.assertEqual(data["message"], "Please, input 'entity' value.")
+        self.assertEqual(
+            data["hint"],
+            "You need to write ?entity=<str:uuid> parameter. "
+            "Pagination parameters: ?page=<str>, ?page_size=<str>."
+        )
