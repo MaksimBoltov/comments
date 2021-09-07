@@ -1,0 +1,471 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "API service of comments",
+    "version": "1.0",
+    "title": "Comment API",
+    "contact": {
+      "email": "boltoff1999@yandex.ru"
+    }
+  },
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/api/new-comments/": {
+      "post": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Add a new comment for certain entity",
+        "description": "Add new comment to database for certain entity and response for page",
+        "operationId": "createComment",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Comment object that needs to be added to the database",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "author",
+                "text",
+                "parent_entity_uuid",
+                "parent_entity_type"
+              ],
+              "properties": {
+                "author": {
+                  "type": "string",
+                  "description": "Nickname or uuid_user value of user",
+                  "example": "user"
+                },
+                "text": {
+                  "type": "string",
+                  "example": "New comment"
+                },
+                "parent_entity_uuid": {
+                  "type": "string",
+                  "description": "String representation of the uuid value",
+                  "example": "82156dda-75dc-42e3-86bb-c75b52d2b88d"
+                },
+                "parent_entity_type": {
+                  "type": "string",
+                  "description": "Name or id of entity type object",
+                  "example": "Comment"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- The entered JSON is not valid\n- The key field was not found\n- The user was not found\n- The parent_entity_uuid is not uuid\n- The parent_entity_type was not found"
+          },
+          "201": {
+            "description": "Correct input. Comment was created",
+            "examples": {
+              "application/json": {
+                "name": "Created",
+                "message": "New comment was created!",
+                "status": 201
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/first-lvl-comments": {
+      "get": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Get all first level comment",
+        "description": "Get all first level comments for a specific entity.\n\n    Processes such requests as:\n        /api/first-lvl-comments?entity=<str>\n        /api/first-lvl-comments?entity=<str>&page_size=<int>\n        /api/first-lvl-comments?entity=<str>&page=<int>\n        /api/first-lvl-comments?entity=<str>&page=<int>&page_size=<int>\n\n",
+        "operationId": "getFirstLevel",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The entity for which comments are searching. Can be uuid value. For example: 82156dda-75dc-42e3-86bb-c75b52d2b88d",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Count of comments on page",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of pagination page",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "examples": {
+              "application/json": {
+                "comments_count": 3,
+                "next": "http://example.com/api/first-lvl-comments/{entity}?page=2&page_size=2",
+                "previous": null,
+                "comments": [
+                  {
+                    "uuid_comment": "386fe2f6-aa1c-4779-ba55-98374807efbb",
+                    "user": "user",
+                    "parent_entity_type": "Comment",
+                    "created_date": "2021-09-07T10:57:19.434389Z",
+                    "text": "Text comment 1",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b88d"
+                  },
+                  {
+                    "uuid_comment": "9a8e2854-c69a-4429-87d1-7a55b38881cb",
+                    "user": "user1",
+                    "parent_entity_type": "Comment",
+                    "created_date": "2021-09-07T11:25:22.111389Z",
+                    "text": "Text comment 2",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b88d"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- Entity value is not UUID\n- Entity value is not found"
+          },
+          "404": {
+            "description": "Invalid page value"
+          }
+        }
+      }
+    },
+    "/api/child-comments": {
+      "get": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Get all child comments for certain entity",
+        "description": "Get all child comments for input root entity.\n\n    Processes such requests as:\n        /api/child-comments?root=<uuid>\n        /api/child-comments?root=<uuid>&entity_type=<str>",
+        "operationId": "getChildComments",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "query",
+            "description": "The entity to find child comments for. For examples: 'd15b567b-2fc6-4ffc-b8bc-19df543d322d'",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "description": "Type of root entity",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "examples": {
+              "application/json": {
+                "uuid_comment": "82156dda-75dc-42e3-86bb-c75b52d2b11d",
+                "created_date": "2021-09-06T14:51:31Z",
+                "user": "user 1",
+                "parent_entity": "d15b568b-1fc6-3ffc-b8bc-19df543d311d",
+                "parent_entity_type": "Another entity",
+                "text": "Root comment",
+                "child": [
+                  {
+                    "uuid_comment": "12345dda-75dc-42e3-86bb-c75b52d2b11d",
+                    "created_date": "2021-09-06T15:51:31Z",
+                    "user": "user 2",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b11d",
+                    "parent_entity_type": "Comment",
+                    "text": "Child comment lvl1 1",
+                    "child": []
+                  },
+                  {
+                    "uuid_comment": "54321dda-75dc-42e3-86bb-c75b52d2b11d",
+                    "created_date": "2021-09-06T16:51:31Z",
+                    "user": "user 3",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b11d",
+                    "parent_entity_type": "Comment",
+                    "text": "Child comment lvl1 2",
+                    "child": []
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- Root is not UUID\n- Element 'root' was not found"
+          },
+          "404": {
+            "description": "Invalid page value"
+          }
+        }
+      }
+    },
+    "/api/history-comments": {
+      "get": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Get all comments by user",
+        "description": "Get all history of comments by certain user.\nAs a query parameter `user`, you can specify either the nickname or uuid.\n\n    Processes such requests as:\n        /api/history-comments?user=<str:user>\n        /api/history-comments?user=<str:user>&page_size=<int>\n        /api/history-comments?user=<str:user>&page=<int>\n        /api/history-comments?user=<str:user>&page=<int>&page_size=<int>",
+        "operationId": "getCommentsHistory",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "description": "The user for whom comments are searching. For examples: '82156dda-75dc-42e3-86bb-c75b52d2b88d' or 'user'",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Count of comments on page (default 50)",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of pagination page",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "examples": {
+              "application/json": {
+                "comments_count": 3,
+                "next": "http://127.0.0.1:8000/api/history-comments?user={nickname|uuid}&page=2&page_size=2",
+                "previous": null,
+                "comments": [
+                  {
+                    "uuid_comment": "6f2a8eb6-feb1-4d27-a53d-f2e77cc89b5c",
+                    "user": "user1",
+                    "parent_entity_type": "Comment",
+                    "created_date": "2021-09-07T12:28:57.318097Z",
+                    "text": "New comment 1",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b88d"
+                  },
+                  {
+                    "uuid_comment": "f9babe9f-6138-45fd-b9b9-f00432ab59d2",
+                    "user": "user2",
+                    "parent_entity_type": "Comment",
+                    "created_date": "2021-09-07T11:11:41.877130Z",
+                    "text": "New comment 2",
+                    "parent_entity": "82156dda-75dc-42e3-86bb-c75b52d2b88d"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- User value was not found\n- User was not found"
+          },
+          "404": {
+            "description": "Invalid page value"
+          }
+        }
+      }
+    },
+    "/api/history/user": {
+      "get": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Get csv file with all comments for certain user",
+        "description": "Get csv file with all comments for certain user.\nAs a query parameter `user`, you can specify either the nickname or uuid.\n\n    Processes such requests as:\n        /api/history/user?user=<str:user>\n        /api/history/user?user=<str:user>&start_date=<str>\n        /api/history/user?user=<str:user>&end_date=<str>\n        /api/history/user?user=<str:user>&start_date=<int>&end_date=<str>",
+        "operationId": "getCSVHistoryUser",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "description": "The user for whom comments are searching. For examples: 'ef1d5da4-bf29-4e1a-bfe2-5c134c57a362' or 'user'",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "Starting from what date to output the result. Example: 2000-01-01T08:00:00",
+            "required": false,
+            "type": "string",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "Ending with what date to output the result. Example: 2000-01-01T08:00:00",
+            "required": false,
+            "type": "string",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful. Can download file"
+          },
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- User value was not found\n- User doesn't exists\n- Start_date or(and) end_date was invalid"
+          },
+          "404": {
+            "description": "Invalid page value"
+          }
+        }
+      }
+    },
+    "/api/history/entity": {
+      "get": {
+        "tags": [
+          "api"
+        ],
+        "summary": "Get csv file with all comments for certain entity",
+        "description": "Get csv file with all comments for certain entity.\n\n    Processes such requests as:\n        /api/history/entity?entity=<str:uuid>\n        /api/history/entity?entity=<str:uuid>&start_date=<str>\n        /api/history/entity?entity=<str:uuid>&end_date=<str>\n        /api/history/entity?entity=<str:uuid>&start_date=<int>&end_date=<str>",
+        "operationId": "getCSVHistoryEntity",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The entity for which comments are searching. Only string representation of UUID. For examples: '82156dda-75dc-42e3-86bb-c75b52d2b88d'",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "Starting from what date to output the result. Example: 2000-01-01T08:00:00",
+            "required": false,
+            "type": "string",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "Ending with what date to output the result. Example: 2000-01-01T08:00:00",
+            "required": false,
+            "type": "string",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful. Can download file"
+          },
+          "400": {
+            "description": "Bad Request. Possible reasons:\n- Entity value was not UUID\n- Entity doesn't exists\n- Start_date or(and) end_date was invalid"
+          },
+          "404": {
+            "description": "Invalid page value"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "type": "basic"
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "uuid_user": {
+          "type": "UUID",
+          "default": "uuid.uuid4",
+          "uniqueItems": true,
+          "primary_key": true
+        },
+        "nickname": {
+          "type": "string",
+          "maxLength": 30,
+          "uniqueItems": true
+        },
+        "firstname": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "EntityType": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "uniqueItems": true,
+          "primary_key": true,
+          "auto_created": true
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "description": {
+          "type": "text"
+        }
+      }
+    },
+    "Comment": {
+      "type": "object",
+      "properties": {
+        "uuid_comment": {
+          "type": "UUID",
+          "default": "uuid.uuid4",
+          "uniqueItems": true,
+          "primary_key": true
+        },
+        "created_date": {
+          "type": "datetime"
+        },
+        "user": {
+          "type": "User",
+          "description": "User model instance"
+        },
+        "text": {
+          "type": "string",
+          "example": "New comment"
+        },
+        "parent_entity": {
+          "type": "UUID"
+        },
+        "parent_entity_type": {
+          "type": "EntityType",
+          "description": "EntityType model instance"
+        }
+      }
+    }
+  }
+}

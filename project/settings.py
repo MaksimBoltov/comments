@@ -33,6 +33,7 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 INSTALLED_APPS = [
     'api',
     'comments',
+    'doc',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,8 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
-    'rest_framework_swagger',
-    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +54,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.RemoteUserAuthentication',
+    ]
+}
 
 ROOT_URLCONF = 'project.urls'
 

@@ -30,8 +30,17 @@ def manage_new_comment(request):
 
     if request.method == "POST":
 
+        # check the validity of JSON
+        try:
+            data = json.loads(request.body)
+        except json.decoder.JSONDecodeError:
+            response = {
+                "name": "Bad Request",
+                "message": "The entered JSON is not valid.",
+                "status": 400,
+            }
+            return Response(response, status=400)
         # check the validity of the data
-        data = json.loads(request.body)
         valid_data, exception_message = is_valid_comment_request(data)
         if not valid_data:
             response = {
@@ -69,13 +78,12 @@ class CommentsListView(ListAPIView):
     for a specific entity.
 
     Processes such requests as:
-        /api/first-lvl-comments?entity=<str:uuid>
-        /api/first-lvl-comments?entity=<str:uuid>&page_size=<int>
-        /api/first-lvl-comments?entity=<str:uuid>&page=<int>
-        /api/first-lvl-comments?entity=<str:uuid>&page=<int>&page_size=<int>
+        /api/first-lvl-comments?entity=<str>
+        /api/first-lvl-comments?entity=<str>&page_size=<int>
+        /api/first-lvl-comments?entity=<str>&page=<int>
+        /api/first-lvl-comments?entity=<str>&page=<int>&page_size=<int>
     Where:
-    <str:uuid> - string representation of the value uuid of specific entity.
-    entity - the entity for which comments are searching.
+    entity - the entity for which comments are searching. Can be uuid value.
     page_size - count of comments on page.
     page - number of pagination page.
     """
@@ -171,9 +179,6 @@ class CSVUserViewSet(APIView):
 
         :param request: request from user.
 
-        :param user: for which user to display the history
-        :type user: str
-
         :raises BadRequestException: if user value is None
         :raises BadRequestExceptionUserData: if user doesn't exists
         :raises BadRequestExceptionDatetime: if start_date or end_date
@@ -252,9 +257,6 @@ class CSVEntityViewSet(APIView):
         """The function processes 'GET' requests.
 
         :param request: request from user.
-
-        :param uuid: uuid of entity for which need display the history
-        :type uuid: str
 
         :raises BadRequestException: if uuid is not UUID value
         :raises BadRequestExceptionDatetime: if start_date or end_date
@@ -341,7 +343,7 @@ def manage_all_child_comments(request):
             }
             return Response(response, status=400)
         # check valid uuid value
-        elif is_uuid(root):
+        elif not is_uuid(root):
             response = {
                 "name": "Bad Request",
                 "message": "Root is not UUID.",
@@ -349,7 +351,7 @@ def manage_all_child_comments(request):
             }
             return Response(response, status=400)
         # check does the uuid value exist
-        elif Comment.objects.filter(uuid_comment=root).count():
+        elif not Comment.objects.filter(uuid_comment=root).count():
             response = {
                 "name": "Bad Request",
                 "message": f"Element '{root}' was not found.",
