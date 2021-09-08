@@ -11,5 +11,6 @@ then
 fi
 
 python3 manage.py makemigrations comments && python3 manage.py migrate
+python3 manage.py set_demo_data
 
 exec "$@"
